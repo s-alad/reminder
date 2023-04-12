@@ -12,8 +12,10 @@ twilio_sid = os.getenv('TWILIO_SID')
 twilio_token = os.getenv('TWILIO_TOKEN')
 twilio_number = os.getenv('TWILIO_NUMBER')
 twilio_to = os.getenv('TWILIO_TO')
+account_sid = twilio_sid
+auth_token = twilio_token
+client = Client(account_sid, auth_token)
 #==================================================================================================
-replied = True #prime this with True
 
 nth = 0
 def numbered(n): return str(n) + ('th' if 11<=n%100<=13 else {1:'st',2:'nd',3:'rd'}.get(n%10, 'th'))
@@ -22,32 +24,24 @@ app = Flask(__name__)
 
 connect = sqlite3.connect('users.db')
 connect.execute('''
-          CREATE TABLE IF NOT EXISTS USERS
-          ([user_id] INTEGER PRIMARY KEY, [phone] TEXT, [state] INTEGER DEFAULT 1, [reminder] INTEGER DEFAULT 1)
-          ''')
+    CREATE TABLE IF NOT EXISTS USERS
+    ([user_id] INTEGER PRIMARY KEY, [phone] TEXT, [state] INTEGER DEFAULT 1, [reminder] INTEGER DEFAULT 1)
+''')
+
+def getcursor(): return sqlite3.connect('users.db').cursor()
+
 
 def remind(text):
-
     #get list of phone numbers from users
-    connect = sqlite3.connect('users.db')
-    cursor = connect.cursor()
+    cursor = getcursor()
+
     cursor.execute('SELECT phone FROM USERS')
-    data = cursor.fetchall()
+    numbers = cursor.fetchall()
 
     #send reminder to each phone number
-    account_sid = twilio_sid
-    auth_token = twilio_token
-    client = Client(account_sid, auth_token)
-    for phone in data:
+    for phone in numbers:
         message = client.messages.create(body=text,from_=twilio_number, to=phone)
-        print(message.sid)
-        print(phone)
-        print('Reminder sent')
-
-    global replied 
-    print(replied)
-    replied = False
-    print(replied)
+        print('Reminder sent to ' + str(phone) + ' | ' + message.sid)
 
     cursor.execute("UPDATE USERS SET state = 0 WHERE state = 1")
     connect.commit()
@@ -62,32 +56,13 @@ def nth_reminder():
 def check():
 
     #open up users.db and check if the state column is not equal to 0
-    connect = sqlite3.connect('users.db')
-    cursor = connect.cursor()
+    cursor = getcursor()
     cursor.execute('SELECT * FROM USERS WHERE state = 0')
     data = cursor.fetchall()
 
     #if the state column is not equal to 0, send a reminder to the user
     for user in data:
         print(user)
-
-    for user in data:
-        print(user)
-
-    global replied
-    global nth
-    print(replied)
-    if not replied:
-        print('User did not reply')
-        nth += 1
-        nth_reminder()
-    else:
-        print('User replied')
-
-sched = BackgroundScheduler(daemon=True)
-sched.add_job(reminder,'cron', hour=21, minute=7, timezone='America/New_York')
-sched.add_job(check, 'interval', minutes=30, timezone='America/New_York')
-sched.start()
 
 @app.route("/remind")
 def remindme():
@@ -126,14 +101,11 @@ def incoming_sms():
     print("RECEIVED:", body)
     resp = MessagingResponse()
 
+    recieved_number = request.values.get('From', None)
+    print(recieved_number)
+
     if body == '1':
         resp.message("confirmed!")
-        global replied
-        global nth
-        print(replied, nth)
-        replied = True
-        nth = 0
-        print(replied, nth)
 
         connect = sqlite3.connect('users.db')
         cursor = connect.cursor()
@@ -154,6 +126,11 @@ def drop():
 @app.route("/")
 def index():
     return "/"
+
+sched = BackgroundScheduler(daemon=True)
+sched.add_job(reminder,'cron', hour=1, minute=45, timezone='America/New_York')
+sched.add_job(check, 'interval', minutes=30, timezone='America/New_York')
+sched.start()
 
 if __name__ == "__main__":
     app.run(debug=True)

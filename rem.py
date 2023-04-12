@@ -27,23 +27,30 @@ connect.execute('''
           ''')
 
 def remind(text):
+
+    #get list of phone numbers from users
+    connect = sqlite3.connect('users.db')
+    cursor = connect.cursor()
+    cursor.execute('SELECT phone FROM USERS')
+    data = cursor.fetchall()
+
+    #send reminder to each phone number
     account_sid = twilio_sid
     auth_token = twilio_token
     client = Client(account_sid, auth_token)
-    message = client.messages.create(body=text,from_=twilio_number, to=twilio_to)
+    for phone in data:
+        message = client.messages.create(body=text,from_=twilio_number, to=phone)
+        print(message.sid)
+        print(phone)
+        print('Reminder sent')
 
-    print(message.sid)
-    print('Reminder sent')
     global replied 
     print(replied)
     replied = False
     print(replied)
 
-    connect = sqlite3.connect('users.db')
-    cursor = connect.cursor()
-    cursor.execute("UPDATE USERS SET state = 1 WHERE state = 0")
+    cursor.execute("UPDATE USERS SET state = 0 WHERE state = 1")
     connect.commit()
-
 
 def reminder():
     remind("This is your daily reminder, reply with the number 1 to confirm")
@@ -52,8 +59,21 @@ def nth_reminder():
     global nth
     remind("This is your " + numbered(nth) + " reminder, reply with the number 1 to confirm")
 
-
 def check():
+
+    #open up users.db and check if the state column is not equal to 0
+    connect = sqlite3.connect('users.db')
+    cursor = connect.cursor()
+    cursor.execute('SELECT * FROM USERS WHERE state = 0')
+    data = cursor.fetchall()
+
+    #if the state column is not equal to 0, send a reminder to the user
+    for user in data:
+        print(user)
+
+    for user in data:
+        print(user)
+
     global replied
     global nth
     print(replied)
@@ -117,7 +137,7 @@ def incoming_sms():
 
         connect = sqlite3.connect('users.db')
         cursor = connect.cursor()
-        cursor.execute("UPDATE USERS SET state = 0 WHERE state = 1")
+        cursor.execute("UPDATE USERS SET state = 1 WHERE state = 0")
         cursor.execute("UPDATE USERS SET reminder = 1 WHERE reminder > 1")
         connect.commit()
 

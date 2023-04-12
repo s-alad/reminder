@@ -17,7 +17,6 @@ auth_token = twilio_token
 client = Client(account_sid, auth_token)
 #==================================================================================================
 
-nth = 0
 def numbered(n): return str(n) + ('th' if 11<=n%100<=13 else {1:'st',2:'nd',3:'rd'}.get(n%10, 'th'))
 
 app = Flask(__name__)
@@ -27,7 +26,6 @@ connect.execute('''
     CREATE TABLE IF NOT EXISTS USERS
     ([user_id] INTEGER PRIMARY KEY, [phone] TEXT, [state] INTEGER DEFAULT 1, [reminder] INTEGER DEFAULT 1)
 ''')
-
 
 def remind(text):
     #get list of phone numbers from users
@@ -48,10 +46,7 @@ def remind(text):
 def reminder():
     remind("This is your daily reminder, reply with the number 1 to confirm")
 
-def nth_reminder():
-    global nth
-    remind("This is your " + numbered(nth) + " reminder, reply with the number 1 to confirm")
-
+@app.route("/check")
 def check():
 
     #open up users.db and check if the state column is not equal to 0
@@ -62,11 +57,21 @@ def check():
 
     #if the state column is not equal to 0, send a reminder to the user
     for user in data:
-        print(user)
+        id = user[0]
+        phone = user[1]
+        reminder = user[3]
+        text = "This is your {} reminder, reply with the number 1 to confirm".format(numbered(reminder))
+        message = client.messages.create(body=text,from_=twilio_number, to=phone)
+        print('{} Reminder sent to '.format(numbered(reminder)) + str(phone) + ' | ' + message.sid)
+
+        cursor.execute("UPDATE USERS SET reminder = reminder + 1 WHERE user_id = ?", (id,))
+        connect.commit()
+    
+    return redirect('/')
 
 @app.route("/remind")
 def remindme():
-    remind("force push 1")
+    remind("forced: This is your daily reminder, reply with the number 1 to confirm")
     return redirect('/')
 
 @app.route("/adduser/<phone>")
@@ -129,8 +134,8 @@ def index():
     return "/"
 
 sched = BackgroundScheduler(daemon=True)
-sched.add_job(reminder,'cron', hour=1, minute=45, timezone='America/New_York')
-sched.add_job(check, 'interval', minutes=30, timezone='America/New_York')
+sched.add_job(reminder,'cron', hour=2, minute=52, timezone='America/New_York')
+sched.add_job(check, 'interval', minutes=2, timezone='America/New_York')
 sched.start()
 
 if __name__ == "__main__":

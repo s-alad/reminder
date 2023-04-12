@@ -28,12 +28,11 @@ connect.execute('''
     ([user_id] INTEGER PRIMARY KEY, [phone] TEXT, [state] INTEGER DEFAULT 1, [reminder] INTEGER DEFAULT 1)
 ''')
 
-def getcursor(): return sqlite3.connect('users.db').cursor()
-
 
 def remind(text):
     #get list of phone numbers from users
-    cursor = sqlite3.connect('users.db').cursor()
+    connect = sqlite3.connect('users.db')
+    cursor = connect.cursor()
 
     cursor.execute('SELECT phone FROM USERS')
     numbers = cursor.fetchall()
@@ -56,7 +55,8 @@ def nth_reminder():
 def check():
 
     #open up users.db and check if the state column is not equal to 0
-    cursor = getcursor()
+    connect = sqlite3.connect('users.db')
+    cursor = connect.cursor()
     cursor.execute('SELECT * FROM USERS WHERE state = 0')
     data = cursor.fetchall()
 

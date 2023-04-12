@@ -23,7 +23,7 @@ app = Flask(__name__)
 connect = sqlite3.connect('users.db')
 connect.execute('''
           CREATE TABLE IF NOT EXISTS USERS
-          ([user_id] INTEGER PRIMARY KEY, [phone] TEXT, [state] INTEGER)
+          ([user_id] INTEGER PRIMARY KEY, [phone] TEXT, [state] INTEGER DEFAULT 1, [reminder] INTEGER DEFAULT 1)
           ''')
 
 def remind(text):
@@ -79,7 +79,7 @@ def adduser(phone: str):
     print(phone)
     with sqlite3.connect("users.db") as users:
         cursor = users.cursor()
-        cursor.execute("INSERT INTO USERS (phone, state) VALUES (?,?)", (phone, 0))
+        cursor.execute("INSERT INTO USERS (phone, state, reminder) VALUES (?,?,?)", (phone, 0, 1))
         users.commit()
     return redirect('/')
 
@@ -121,6 +121,14 @@ def incoming_sms():
         connect.commit()
 
     return str(resp)
+
+@app.route("/drop")
+def drop():
+    connect = sqlite3.connect('users.db')
+    cursor = connect.cursor()
+    cursor.execute("DROP TABLE USERS")
+    connect.commit()
+    return redirect('/')
 
 @app.route("/")
 def index():

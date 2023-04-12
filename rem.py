@@ -52,7 +52,7 @@ def check():
         print('User replied')
 
 sched = BackgroundScheduler(daemon=True)
-sched.add_job(reminder,'cron', hour=20, minute=42, timezone='America/New_York')
+sched.add_job(reminder,'cron', hour=21, minute=7, timezone='America/New_York')
 sched.add_job(check, 'interval', minutes=30, timezone='America/New_York')
 sched.start()
 

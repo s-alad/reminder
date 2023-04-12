@@ -46,9 +46,7 @@ def remind(text):
 def reminder():
     remind("This is your daily reminder, reply with the number 1 to confirm")
 
-@app.route("/check")
-def check():
-
+def checker():
     #open up users.db and check if the state column is not equal to 0
     connect = sqlite3.connect('users.db')
     cursor = connect.cursor()
@@ -66,7 +64,10 @@ def check():
 
         cursor.execute("UPDATE USERS SET reminder = reminder + 1 WHERE user_id = ?", (id,))
         connect.commit()
-    
+
+@app.route("/check")
+def check():
+    checker()
     return redirect('/')
 
 @app.route("/remind")
@@ -79,7 +80,7 @@ def adduser(phone: str):
     print(phone)
     with sqlite3.connect("users.db") as users:
         cursor = users.cursor()
-        cursor.execute("INSERT INTO USERS (phone, state, reminder) VALUES (?,?,?)", (phone, 0, 1))
+        cursor.execute("INSERT INTO USERS (phone, state, reminder) VALUES (?,?,?)", (phone, 1, 1))
         users.commit()
     return redirect('/')
 
@@ -134,8 +135,8 @@ def index():
     return "/"
 
 sched = BackgroundScheduler(daemon=True)
-sched.add_job(reminder,'cron', hour=2, minute=52, timezone='America/New_York')
-sched.add_job(check, 'interval', minutes=2, timezone='America/New_York')
+sched.add_job(reminder,'cron', hour=3, minute=1, timezone='America/New_York')
+sched.add_job(checker, 'interval', minutes=2, timezone='America/New_York')
 sched.start()
 
 if __name__ == "__main__":

@@ -110,8 +110,8 @@ def incoming_sms():
 
         connect = sqlite3.connect('users.db')
         cursor = connect.cursor()
-        cursor.execute("UPDATE USERS SET state = 1 WHERE state = 0")
-        cursor.execute("UPDATE USERS SET reminder = 1 WHERE reminder > 1")
+        cursor.execute("UPDATE USERS SET state = 1 WHERE phone = ?", (recieved_number,))
+        cursor.execute("UPDATE USERS SET reminder = 1 WHERE phone = ?", (recieved_number,))
         connect.commit()
 
     return str(resp)

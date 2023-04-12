@@ -1,36 +1,49 @@
 import os
+import sqlite3
 from dotenv import load_dotenv
 from flask import Flask, request, redirect
 from apscheduler.schedulers.background import BackgroundScheduler
 from twilio.twiml.messaging_response import MessagingResponse
 from twilio.rest import Client
 from tzlocal import get_localzone
-
+#==================================================================================================
 load_dotenv()
 twilio_sid = os.getenv('TWILIO_SID')
 twilio_token = os.getenv('TWILIO_TOKEN')
 twilio_number = os.getenv('TWILIO_NUMBER')
 twilio_to = os.getenv('TWILIO_TO')
-
+#==================================================================================================
 replied = True #prime this with True
 
 nth = 0
 def numbered(n): return str(n) + ('th' if 11<=n%100<=13 else {1:'st',2:'nd',3:'rd'}.get(n%10, 'th'))
 
-def remind(bo):
+app = Flask(__name__)
+
+connect = sqlite3.connect('users.db')
+connect.execute('''
+          CREATE TABLE IF NOT EXISTS USERS
+          ([user_id] INTEGER PRIMARY KEY, [phone] TEXT, [state] INTEGER)
+          ''')
+
+def remind(text):
     account_sid = twilio_sid
     auth_token = twilio_token
     client = Client(account_sid, auth_token)
-    message = client.messages.create(
-        body=bo,
-        from_=twilio_number, to=twilio_to
-    )
+    message = client.messages.create(body=text,from_=twilio_number, to=twilio_to)
+
     print(message.sid)
     print('Reminder sent')
     global replied 
     print(replied)
     replied = False
     print(replied)
+
+    connect = sqlite3.connect('users.db')
+    cursor = connect.cursor()
+    cursor.execute("UPDATE USERS SET state = 1 WHERE state = 0")
+    connect.commit()
+
 
 def reminder():
     remind("This is your daily reminder, reply with the number 1 to confirm")
@@ -56,7 +69,36 @@ sched.add_job(reminder,'cron', hour=21, minute=7, timezone='America/New_York')
 sched.add_job(check, 'interval', minutes=30, timezone='America/New_York')
 sched.start()
 
-app = Flask(__name__)
+@app.route("/remind")
+def remindme():
+    remind("force push 1")
+    return redirect('/')
+
+@app.route("/adduser/<phone>")
+def adduser(phone: str):
+    print(phone)
+    with sqlite3.connect("users.db") as users:
+        cursor = users.cursor()
+        cursor.execute("INSERT INTO USERS (phone, state) VALUES (?,?)", (phone, 0))
+        users.commit()
+    return redirect('/')
+
+@app.route("/updateuser/<phone>/<state>")
+def updateuser(phone: str, state: int):
+    print(phone, state)
+    with sqlite3.connect("users.db") as users:
+        cursor = users.cursor()
+        cursor.execute("UPDATE USERS SET state = ? WHERE phone = ?", (state, phone))
+        users.commit()
+    return redirect('/')
+
+@app.route("/getusers")
+def getusers():
+    connect = sqlite3.connect('users.db')
+    cursor = connect.cursor()
+    cursor.execute('SELECT * FROM USERS')
+    data = cursor.fetchall()
+    return str(data)
 
 @app.route("/sms", methods=['GET', 'POST'])
 def incoming_sms():
@@ -72,6 +114,11 @@ def incoming_sms():
         replied = True
         nth = 0
         print(replied, nth)
+
+        connect = sqlite3.connect('users.db')
+        cursor = connect.cursor()
+        cursor.execute("UPDATE USERS SET state = 0 WHERE state = 1")
+        connect.commit()
 
     return str(resp)
 

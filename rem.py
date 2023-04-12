@@ -44,7 +44,7 @@ def remind(text):
     connect.commit()
 
 def reminder():
-    remind("This is your daily reminder, reply with the number 1 to confirm")
+    remind("This is your daily reminder to take your medicine, reply with the number 1 to confirm")
 
 def checker():
     print("Checking...")
@@ -59,7 +59,7 @@ def checker():
         id = user[0]
         phone = user[1]
         reminder = user[3]
-        text = "This is your {} reminder, reply with the number 1 to confirm".format(numbered(reminder))
+        text = "This is your {} reminder to take your medicine, reply with the number 1 to confirm".format(numbered(reminder))
         message = client.messages.create(body=text,from_=twilio_number, to=phone)
         print('{} Reminder sent to '.format(numbered(reminder)) + str(phone) + ' | ' + message.sid)
 

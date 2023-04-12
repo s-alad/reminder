@@ -33,7 +33,7 @@ def getcursor(): return sqlite3.connect('users.db').cursor()
 
 def remind(text):
     #get list of phone numbers from users
-    cursor = getcursor()
+    cursor = sqlite3.connect('users.db').cursor()
 
     cursor.execute('SELECT phone FROM USERS')
     numbers = cursor.fetchall()
@@ -99,10 +99,11 @@ def getusers():
 def incoming_sms():
     body = request.values.get('Body', None)
     print("RECEIVED:", body)
-    resp = MessagingResponse()
 
     recieved_number = request.values.get('From', None)
     print(recieved_number)
+
+    resp = MessagingResponse()
 
     if body == '1':
         resp.message("confirmed!")

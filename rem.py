@@ -139,6 +139,7 @@ def index():
 
 sched = BackgroundScheduler(daemon=True)
 sched.add_job(reminder,'cron', hour=9, minute=15, timezone='America/New_York')
+sched.add_job(reminder,'cron', hour=21, minute=15, timezone='America/New_York')
 sched.add_job(checker, 'interval', minutes=30, timezone='America/New_York')
 sched.start()
 

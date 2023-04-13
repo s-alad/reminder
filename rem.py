@@ -87,6 +87,15 @@ def adduser(phone: str):
         users.commit()
     return redirect('/')
 
+@app.route("/deleteuser/<phone>")
+def deleteuser(phone: str):
+    print(phone)
+    with sqlite3.connect("users.db") as users:
+        cursor = users.cursor()
+        cursor.execute("DELETE FROM USERS WHERE phone = ?", (phone,))
+        users.commit()
+    return redirect('/')
+
 @app.route("/updateuser/<phone>/<state>")
 def updateuser(phone: str, state: int):
     print(phone, state)
@@ -142,6 +151,7 @@ sched.add_job(reminder,'cron', hour=9, minute=15, timezone='America/New_York')
 sched.add_job(reminder,'cron', hour=21, minute=20, timezone='America/New_York')
 sched.add_job(checker, 'interval', minutes=30, timezone='America/New_York')
 sched.start()
+
 
 if __name__ == "__main__":
     app.run(debug=True)
